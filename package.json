@@ -1,0 +1,25 @@
+{
+  "name": "pinocchio-bulksender",
+  "version": "1.0.0",
+  "description": "Pinocchio Bulksender",
+  "main": "index.js",
+  "scripts": {
+    "build": "cargo build-sbf",
+    "pretest": "npm run build",
+    "test": "vitest run"
+  },
+  "keywords": [],
+  "author": "Tu Phan",
+  "license": "MIT",
+  "dependencies": {
+    "@solana/spl-token": "^0.4.14",
+    "@solana/web3.js": "^1.98.4",
+    "borsh": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.1",
+    "litesvm": "^0.3.3",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}
