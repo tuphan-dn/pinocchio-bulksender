@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 import {
   createAndFundWallet,
   initializeMint,
@@ -27,168 +27,192 @@ const SafeTransferParameters = {
   },
 }
 
-describe('safe transfer', async () => {
+describe('safe transfer', () => {
   const { svm, programId } = loadFixture()
   const payer = createAndFundWallet(svm)
 
+  const decimals = 9
   const supply = 100_000_000_000n
 
-  it('should call the safe_transfer successfully in legacy token', () => {
-    const mint = initializeMint(svm, payer)
-    const from = mintTo(svm, payer, mint, payer.publicKey, supply)
+  describe('legacy token', () => {
+    const mint = Keypair.generate()
+    const from = getAssociatedTokenAddressSync(mint.publicKey, payer.publicKey)
 
-    const receiver = Keypair.generate()
-    const to = getAssociatedTokenAddressSync(mint, receiver.publicKey)
-
-    const params = {
-      amount: 1_000_000_000n,
-    }
-
-    const instructionDisc = Buffer.from([0])
-    const instructionData = serialize(SafeTransferParameters, params)
-
-    const ix = new TransactionInstruction({
-      keys: [
-        {
-          pubkey: payer.publicKey,
-          isSigner: true,
-          isWritable: true,
-        },
-        {
-          pubkey: from,
-          isSigner: false,
-          isWritable: true,
-        },
-        {
-          pubkey: receiver.publicKey,
-          isSigner: false,
-          isWritable: false,
-        },
-        {
-          pubkey: to,
-          isSigner: false,
-          isWritable: true,
-        },
-        {
-          pubkey: mint,
-          isSigner: false,
-          isWritable: false,
-        },
-        {
-          pubkey: SystemProgram.programId,
-          isSigner: false,
-          isWritable: false,
-        },
-        {
-          pubkey: TOKEN_PROGRAM_ID,
-          isSigner: false,
-          isWritable: false,
-        },
-        {
-          pubkey: ASSOCIATED_TOKEN_PROGRAM_ID,
-          isSigner: false,
-          isWritable: false,
-        },
-      ],
-      programId,
-      data: Buffer.concat([instructionDisc, instructionData]),
+    beforeAll(() => {
+      initializeMint(svm, payer, mint, decimals, TOKEN_PROGRAM_ID)
+      mintTo(
+        svm,
+        payer,
+        mint.publicKey,
+        payer.publicKey,
+        supply,
+        TOKEN_PROGRAM_ID,
+      )
     })
 
-    const tx = new Transaction().add(ix)
+    it('should call safe_transfer successfully', () => {
+      const receiver = Keypair.generate()
+      const to = getAssociatedTokenAddressSync(
+        mint.publicKey,
+        receiver.publicKey,
+      )
+      const params = {
+        amount: 1_000_000_000n,
+      }
 
-    const re = sendTransaction(svm, tx, [payer])
+      const instructionDisc = Buffer.from([0])
+      const instructionData = serialize(SafeTransferParameters, params)
 
-    if (re instanceof TransactionMetadata) console.log(re.logs())
-    else console.log(re.meta().logs())
-    expect(re).instanceOf(TransactionMetadata)
+      const ix = new TransactionInstruction({
+        keys: [
+          {
+            pubkey: payer.publicKey,
+            isSigner: true,
+            isWritable: true,
+          },
+          {
+            pubkey: from,
+            isSigner: false,
+            isWritable: true,
+          },
+          {
+            pubkey: receiver.publicKey,
+            isSigner: false,
+            isWritable: false,
+          },
+          {
+            pubkey: to,
+            isSigner: false,
+            isWritable: true,
+          },
+          {
+            pubkey: mint.publicKey,
+            isSigner: false,
+            isWritable: false,
+          },
+          {
+            pubkey: SystemProgram.programId,
+            isSigner: false,
+            isWritable: false,
+          },
+          {
+            pubkey: TOKEN_PROGRAM_ID,
+            isSigner: false,
+            isWritable: false,
+          },
+          {
+            pubkey: ASSOCIATED_TOKEN_PROGRAM_ID,
+            isSigner: false,
+            isWritable: false,
+          },
+        ],
+        programId,
+        data: Buffer.concat([instructionDisc, instructionData]),
+      })
+
+      const tx = new Transaction().add(ix)
+
+      const re = sendTransaction(svm, tx, [payer])
+
+      if (re instanceof TransactionMetadata) console.log(re.logs())
+      else console.log(re.meta().logs())
+      expect(re).instanceOf(TransactionMetadata)
+    })
   })
 
-  it('should call the safe_transfer successfully in token 2022', () => {
-    const mint = initializeMint(
-      svm,
-      payer,
-      undefined,
-      undefined,
-      TOKEN_2022_PROGRAM_ID,
-    )
-    const from = mintTo(
-      svm,
-      payer,
-      mint,
+  describe('token 2022', () => {
+    const mint = Keypair.generate()
+    const from = getAssociatedTokenAddressSync(
+      mint.publicKey,
       payer.publicKey,
-      supply,
-      TOKEN_2022_PROGRAM_ID,
-    )
-
-    const receiver = Keypair.generate()
-    const to = getAssociatedTokenAddressSync(
-      mint,
-      receiver.publicKey,
       true,
       TOKEN_2022_PROGRAM_ID,
       ASSOCIATED_TOKEN_PROGRAM_ID,
     )
 
-    const params = {
-      amount: 1_000_000_000n,
-    }
-
-    const instructionDisc = Buffer.from([0])
-    const instructionData = serialize(SafeTransferParameters, params)
-
-    const ix = new TransactionInstruction({
-      keys: [
-        {
-          pubkey: payer.publicKey,
-          isSigner: true,
-          isWritable: true,
-        },
-        {
-          pubkey: from,
-          isSigner: false,
-          isWritable: true,
-        },
-        {
-          pubkey: receiver.publicKey,
-          isSigner: false,
-          isWritable: false,
-        },
-        {
-          pubkey: to,
-          isSigner: false,
-          isWritable: true,
-        },
-        {
-          pubkey: mint,
-          isSigner: false,
-          isWritable: false,
-        },
-        {
-          pubkey: SystemProgram.programId,
-          isSigner: false,
-          isWritable: false,
-        },
-        {
-          pubkey: TOKEN_2022_PROGRAM_ID,
-          isSigner: false,
-          isWritable: false,
-        },
-        {
-          pubkey: ASSOCIATED_TOKEN_PROGRAM_ID,
-          isSigner: false,
-          isWritable: false,
-        },
-      ],
-      programId,
-      data: Buffer.concat([instructionDisc, instructionData]),
+    beforeAll(() => {
+      initializeMint(svm, payer, mint, decimals, TOKEN_2022_PROGRAM_ID)
+      mintTo(
+        svm,
+        payer,
+        mint.publicKey,
+        payer.publicKey,
+        supply,
+        TOKEN_2022_PROGRAM_ID,
+      )
     })
 
-    const tx = new Transaction().add(ix)
+    it('should call safe_transfer successfully', () => {
+      const receiver = Keypair.generate()
+      const to = getAssociatedTokenAddressSync(
+        mint.publicKey,
+        receiver.publicKey,
+        true,
+        TOKEN_2022_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID,
+      )
 
-    const re = sendTransaction(svm, tx, [payer])
+      const params = {
+        amount: 1_000_000_000n,
+      }
 
-    if (re instanceof TransactionMetadata) console.log(re.logs())
-    else console.log(re.meta().logs())
-    expect(re).instanceOf(TransactionMetadata)
+      const instructionDisc = Buffer.from([0])
+      const instructionData = serialize(SafeTransferParameters, params)
+
+      const ix = new TransactionInstruction({
+        keys: [
+          {
+            pubkey: payer.publicKey,
+            isSigner: true,
+            isWritable: true,
+          },
+          {
+            pubkey: from,
+            isSigner: false,
+            isWritable: true,
+          },
+          {
+            pubkey: receiver.publicKey,
+            isSigner: false,
+            isWritable: false,
+          },
+          {
+            pubkey: to,
+            isSigner: false,
+            isWritable: true,
+          },
+          {
+            pubkey: mint.publicKey,
+            isSigner: false,
+            isWritable: false,
+          },
+          {
+            pubkey: SystemProgram.programId,
+            isSigner: false,
+            isWritable: false,
+          },
+          {
+            pubkey: TOKEN_2022_PROGRAM_ID,
+            isSigner: false,
+            isWritable: false,
+          },
+          {
+            pubkey: ASSOCIATED_TOKEN_PROGRAM_ID,
+            isSigner: false,
+            isWritable: false,
+          },
+        ],
+        programId,
+        data: Buffer.concat([instructionDisc, instructionData]),
+      })
+
+      const tx = new Transaction().add(ix)
+
+      const re = sendTransaction(svm, tx, [payer])
+
+      if (re instanceof TransactionMetadata) console.log(re.logs())
+      else console.log(re.meta().logs())
+      expect(re).instanceOf(TransactionMetadata)
+    })
   })
 })
